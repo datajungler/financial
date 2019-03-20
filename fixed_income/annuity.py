@@ -14,7 +14,7 @@ class AnnuityImmediate(CashFlow):
         print("Future Value have to be zero.")
 		
     def setMode(self, mode):
-        print("Failed. Annity Immediate should be under 'END' mode.")
+        print("Failed. Annuity Immediate should be computed under 'END' mode.")
 
 
 
@@ -31,7 +31,7 @@ class AnnuityDue(CashFlow):
         print("Future Value have to be zero.")
 		
     def setMode(self, mode):
-        print("Failed. Annity Due have should be under 'BGN' mode.")
+        print("Failed. Annuity Due have should be computed under 'BGN' mode.")
 
 
 		
