@@ -27,9 +27,6 @@ class Bonds(CashFlow):
         self.YTM = self.getR() * self.coupon_period
         return self.YTM
 	
-    def getType(self):
-        return self.type
-	
     def macaulayDuration(self):
         cashFlow = [self.PMT]*self.N
         cashFlow[-1] += self.FV

@@ -89,19 +89,4 @@ class CashFlow:
         self.N = N
         return self.N
 		
-		
 
-		
-def EAR(r, m=1):
-# r: periodic rate
-# m: number of compounding period per year
-
-    if m == 'continous':
-        ear = exp(r) - 1
-    else:
-        ear = pow(1+r/m,m) - 1
-    return ear
-
-
-if __name__ == '__main__':
-    main()
