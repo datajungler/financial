@@ -45,4 +45,3 @@ def forwardRate(spot_rate_list, start_N, end_N):
     return spot_end_N / float(spot_start_N) - 1
 
 	
-print(timeWeightedRate([0.05, 0.05, 0.04, 0.03]))
