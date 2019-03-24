@@ -31,10 +31,18 @@ def EAR(r, compound_period=1, continuous=False):
     return ear
 
 
+def timeWeightedRate(spot_rate_list):
+    timeWeighted = 1.0
+    for r in spot_rate_list:
+	    timeWeighted = timeWeighted*(1+r)
+    return pow(timeWeighted,1/len(spot_rate_list))-1
+
 def forwardRate(spot_rate_list, start_N, end_N):
     spot_end_N = pow(1+spot_rate_list[end_N-1], end_N)
     spot_start_N = pow(1+spot_rate_list[start_N-1], start_N)
     print(spot_end_N)
     print(spot_start_N)
     return spot_end_N / float(spot_start_N) - 1
+
 	
+print(timeWeightedRate([0.05, 0.05, 0.04, 0.03]))

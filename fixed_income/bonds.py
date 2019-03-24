@@ -1,15 +1,20 @@
 from base import CashFlow
 
 class Bonds(CashFlow):
-    def __init__(self, N=0, price=0, face_value=0, coupon_rate=0, coupon_period=1):
+    def __init__(self, N=0, price=0, face_value=0, coupon_rate=0, coupon_period=1, price_lower=0.0, price_upper=0.0, delta_YTM=0.0):
 		# coupon_period: number of coupon periods per year
 		
         self.N = N * coupon_period
+        self.price = price
         self.PV = -price
         self.FV = face_value
         self.PMT = coupon_rate * face_value / coupon_period
         self.mode = 'END'
         self.coupon_period = coupon_period
+        self.price_lower = price_lower
+        self.price_upper = price_upper
+        self.delta_YTM = delta_YTM
+        self.convexity = 0.0
 		
         if price - face_value > 0:
             self.type = 'premium'
@@ -35,14 +40,23 @@ class Bonds(CashFlow):
 	    
     def modifiedDuration(self):
         return self.macaulayDuration() / (1+self.getYTM()/self.coupon_period)
-        
+    
+    def effectiveDuration(self):
+        return (self.price_upper - self.price_lower) / float(2*self.price*pow(self.delta_YTM, 2))
+	
+    def getConvexity(self):
+        self.convexity = (self.price_upper - self.price_lower + 2*self.price) / float(self.price*pow(self.delta_YTM, 2))
+        return self.convexity
+
+    def pricePercentChange(self):
+	    return -self.modifiedDuration() * self.delta_YTM + 0.5 * self.getConvexity() * pow(self.delta_YTM,2)
+	
 	
 class AmortizingBonds(Bonds):
     def __init__(self):
          print("")
 
+
 		 
-b = Bonds(10,900,1000,0.05)
-result = b.macaulayDuration()
-print(result)
-print(b.modifiedDuration())
+
+
