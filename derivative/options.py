@@ -1,22 +1,30 @@
 from pricing import singlePeriodModelValuation, multiPeriodModelValuation
+import matplotlib.pyplot as plt
 
 class Options:
-    def __init__(self, option_type, spot_price_initial, strike_price, dividend):
+    def __init__(self, N, call_put, spot_price_initial, strike_price, dividend, volatility, type, buy=True):
         self.product = "Options"
+        self.N = N
         self.spot_price_initial = spot_price_initial
         self.strike_price = strike_price
-        self.option_type = option_type
+        self.call_put = call_put
         self.dividend= dividend
-        if self.option_type == 'call':
-            self.value = max(spot_price_initial - strike_price, 0)
-        elif self.option_type == 'put':
-            self.value = max(strike_price - spot_price_initial, 0)
-        else:
-            raise ValueError("Please input the suitable options type.")
+        self.volatility = volatility
+        self.type = type
+		self.buy = buy
+
+        if self.call_put not in ('call', 'put'): raise ValueError("Please input the suitable options type.")
+        if self.call_put == 'put': self.type_boolean = -1
+        else: self.type_boolean = 1
 		
+        self.value = max(strike_price - spot_price_initial, 0) * self.type_boolean
+        if self.type not in ('American', 'European'):
+            raise ValueError("Please input the suitable options type: American / European.")
 
-
-opt = Options(option_type='call', spot_price_initial=100, strike_price=100, dividend=0.0)
-print(singlePeriodModelValuation(product=opt, up_rate=0.06, risk_free_rate=0.02))
-result = multiPeriodModelValuation(N=3, product=opt, up_rate=0.07, risk_free_rate=0.01)
-print(result)
+    def payOff(self, price_list, plot_graph=False):
+        if self.strike_price not in price_list: raise ValueError("Please include the strike price in the list of underlying price!")
+        payOff_list = [max((price - self.strike_price)*self.type_boolean, 0) for price in price_list]
+        if plot_graph:
+            plt.plot(price_list, payOff_list)
+            plt.show()
+        return payOff_list

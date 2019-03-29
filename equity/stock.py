@@ -1,7 +1,7 @@
 from base import CAPM
 
 class Stock:
-    def __init__(self, stock_id, stock_name, spot_price, dividend, growth_rate, type='common', required_rate_of_return=0.0, market_data=None):
+    def __init__(self, stock_id, stock_name, spot_price, dividend, growth_rate, type='common', required_rate_of_return=0.0, volatility=0.0, market_data=None):
         self.stock_id = stock_id
         self.stock_name = stock_name
         self.spot_price = spot_price
@@ -10,6 +10,7 @@ class Stock:
         self.type = type
         self.market_data = market_data
         self.required_rate_of_return = required_rate_of_return
+        self.volatility = volatility
     
     def cost_of_equity(self):
         if self.market_data is not None:
