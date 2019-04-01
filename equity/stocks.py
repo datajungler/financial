@@ -1,10 +1,12 @@
-from base import CAPM
+from .base import CAPM
 
-class Stock:
-    def __init__(self, stock_id, stock_name, spot_price, dividend, growth_rate, type='common', required_rate_of_return=0.0, volatility=0.0, market_data=None):
+class Stocks:
+    def __init__(self, N=0.0, stock_id='', stock_name='', spot_price_initial=0.0, dividend=0.0, growth_rate=0.0, type='common', required_rate_of_return=0.0, volatility=0.0, market_data=None):
+        self.product = "Stocks"
+        self.N = N
         self.stock_id = stock_id
         self.stock_name = stock_name
-        self.spot_price = spot_price
+        self.spot_price_initial = spot_price_initial
         self.dividend = dividend
         self.growth_rate = growth_rate
         self.type = type
@@ -18,12 +20,12 @@ class Stock:
             cost_of_equity = CAPM(self.market_data['risk_free_rate'], self.market_data['market_return'], self.market_data['stock_beta'])
         else:
             print("As market information is unknown, cost of equity is computed under stock dividend.")
-            cost_of_equity = self.dividend*(1+self.growth_rate) / float(self.spot_price) + self.growth_rate
+            cost_of_equity = self.dividend*(1+self.growth_rate) / float(self.spot_price_initial) + self.growth_rate
 			
 		
     def value(self):
         if self.type == 'preferred':
-            value = spot_price
+            value = spot_price_initial
         elif self.type == 'common':
             if self.market_data is not None:
                 print("As market information is available, cost of equity is computed under CAPM.")
@@ -47,5 +49,3 @@ class Stock:
 			
         return value
 
-st = Stock(stock_id='', stock_name='', spot_price=90, dividend=[3,4,5,5,6,7], growth_rate=0.05, type='common', required_rate_of_return=0.1, market_data=None)
-print(st.value())

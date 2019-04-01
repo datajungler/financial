@@ -1,23 +1,21 @@
-from pricing import singlePeriodModelValuation, multiPeriodModelValuation
 import matplotlib.pyplot as plt
 
 class Options:
-    def __init__(self, N, call_put, spot_price_initial, strike_price, dividend, volatility, type, buy=True):
+    def __init__(self, N, call_put, spot_price_initial=0.0, strike_price=0.0, dividend=0.0, volatility=0.0, type="European", buy=True):
         self.product = "Options"
         self.N = N
         self.spot_price_initial = spot_price_initial
         self.strike_price = strike_price
         self.call_put = call_put
-        self.dividend= dividend
+        self.dividend = dividend
         self.volatility = volatility
         self.type = type
-		self.buy = buy
+        self.buy = buy
 
         if self.call_put not in ('call', 'put'): raise ValueError("Please input the suitable options type.")
         if self.call_put == 'put': self.type_boolean = -1
         else: self.type_boolean = 1
 		
-        self.value = max(strike_price - spot_price_initial, 0) * self.type_boolean
         if self.type not in ('American', 'European'):
             raise ValueError("Please input the suitable options type: American / European.")
 
