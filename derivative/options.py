@@ -26,3 +26,23 @@ class Options:
             plt.plot(price_list, payOff_list)
             plt.show()
         return payOff_list
+
+
+class CapFloors():
+    def __init__(self, N, cap_floor, strike_price=0.0, type="European", buy=True)
+        self.product = "CapFloor"
+        self.N = N
+        self.strike_price = strike_price
+        self.cap_floor = cap_floor
+        self.type = type
+        self.buy = buy
+
+        if self.call_put not in ('cap', 'floor'): raise ValueError("Please input the suitable options type.")
+        if self.call_put == 'put': self.type_boolean = -1
+        else: self.type_boolean = 1
+		
+		if self.type not in ('American', 'European'):
+            raise ValueError("Please input the suitable options type: American / European.")
+		
+		
+		

@@ -25,7 +25,7 @@ def getSingleValue(N, T, product, underlying, risk_free_rate, up_value, down_val
         value = override_value
     elif product.product == "Bonds":
         value = coupon_payment +  1/float(1+spot_rate) * (q * up_value +(1-q) * down_value)
-    elif product.product == "Forwards" and underlying.product == "Bonds":
+    elif product.product in ("Options", "Forwards") and underlying.product == "Bonds":
         value = 1/float(1+spot_rate) * (q * up_value +(1-q) * down_value)
     else:
         value = (q * up_value +(1-q) * down_value)
@@ -58,7 +58,7 @@ def slideWindow(arr):
         new_arr.append([arr[i],arr[i+1]])
     return new_arr
 
-def getMultipleValue(iter, N, T, product, underlying, up, down, up_value, down_value, up_rate, q, risk_free_rate, black_scholes, idx, acc_outcomes, underlying_value=None, underlying_value_list=None, early_exercise_N=0):
+def getMultipleValue(iter, N, T, product, underlying, up, down, up_value, down_value, up_rate, q, risk_free_rate, black_scholes, idx, acc_outcomes, underlying_value=None, underlying_value_list=None, rate_value_list=None, early_exercise_N=0):
     early_exercise = False
     override_value = None
     coupon_payment = None
@@ -73,47 +73,64 @@ def getMultipleValue(iter, N, T, product, underlying, up, down, up_value, down_v
 		
         return list(reversed(acc_outcomes))
     else:
-
+        # Underlying bonds needs rate lattice for computation
+        if underlying.product == "Bonds" and rate_value_list == None:
+            raise ValueError("Please input the rates lattice for underlying bonds!")
+			
+		# Underlying lattice is necessary except for Stocks and Rates
         if underlying_value_list is None:
-            #if product.product == "Options":
-            #    underlying_value = [max((underlying.spot_price_initial*pow(up,product.N-i)*pow(down,i) - product.strike_price)*product.type_boolean,0) for i in range(0,N+1)]
-            #elif product.product in ("Forwards", "Futures"):
-            #    underlying_value = [(underlying.spot_price_initial*pow(up,product.N-i)*pow(down,i)) for i in range(0,product.N+1)]
             if product.product == "Stocks":
                 underlying_value = [(product.spot_price_initial*pow(up,product.N-i)*pow(down,i)) for i in range(0,product.N+1)]
             elif product.product == "Rates":
                 underlying_value = [(product.spot_rate_initial*pow(up,product.N-i)*pow(down,i)) for i in range(0,product.N+1)]
             else: raise ValueError("Please input the underlying lattice!")
             underlying_value_list = underlying_value
+        
         elif underlying_value is None:
             if product.product == "Bonds":
                 underlying_value = [product.FV + product.PMT] * (N+1)
-            elif product.product in ("Stocks", "Futures"):
+            elif product.product in ("Stocks", "Futures") and underlying.product == "Stock":
                 underlying_value = underlying_value_list[product.N]
             elif product.product == "Options":
                 underlying_value = [max((u-product.strike_price)*product.type_boolean,0) for u in underlying_value_list[product.N]]
+            elif product.product in ("Options", "Futures", "Forwards") and underlying.product == "Bonds":
+                underlying_value = [u-underlying.PMT for u in underlying_value_list[product.N]]
 
         new_outcomes = list()
         print("Value at time = " + str(iter) +":\n"+ str(underlying_value))
         acc_outcomes.append(underlying_value)
 
         for j in range(iter):
+            # For American options
             if product.product == "Options" and underlying.product == "Stocks": 
                 option_value = max((underlying.spot_price_initial*pow(up,iter-j-1)*pow(down,j) - product.strike_price)*product.type_boolean,0)
             elif product.product == "Options" and underlying.product == "Futures":
                 option_value = max((underlying_value_list[iter-1][j] - product.strike_price)*product.type_boolean,0)
+            elif product.product == "Options" and underlying.product == "Bonds":
+                option_value = max((underlying_value_list[iter-1][j] - product.strike_price)*product.type_boolean,0)
+            #elif product.product == "Options" and underlying.product == "Bonds":
+            #    option_value = # TODO: max((underlying_value_list[iter-1][j] - product.strike_price)*product.type_boolean,0)
             else: option_value = 0
+			
+			# Exception handle for Stock and Rate lattice and override the value
             if product.product in ("Stocks"): override_value = underlying_value[idx[j][0]] / float(up) 
             elif product.product in ("Rates"): override_value = underlying_value[idx[j][0]] / float(1+up_rate)
+			
+			# Prepare the parameters of Bonds for backward calculation
             if product.product == "Bonds": coupon_payment, spot_rate = (product.PMT, underlying_value_list[iter-1][j])
+            elif underlying.product == "Bonds": spot_rate = rate_value_list[iter-1][j]
+			
+			# Backward calculation of pricing on each node
             value = getSingleValue(N, T, product, underlying, up_value=underlying_value[idx[j][0]], down_value=underlying_value[idx[j][1]], q=q, risk_free_rate=risk_free_rate, black_scholes=black_scholes, option_value=option_value, override_value=override_value, coupon_payment=coupon_payment, spot_rate=spot_rate)
             new_outcomes.append(value)
-            if value == option_value and value !=0: early_exercise = True or early_exercise
+            
+			# Capture the earliest period for early exercise on American Options
+			if value == option_value and value !=0: early_exercise = True or early_exercise
         underlying_value = new_outcomes
         new_idx = slideWindow(list(range(iter)))
         if early_exercise == True: early_exercise_N = iter-1
         
-        return getMultipleValue(iter-1, N, T, product, underlying, up, down, up_value, down_value, up_rate, q, risk_free_rate, black_scholes, new_idx, acc_outcomes, underlying_value, underlying_value_list, early_exercise_N=early_exercise_N)
+        return getMultipleValue(iter-1, N, T, product, underlying, up, down, up_value, down_value, up_rate, q, risk_free_rate, black_scholes, new_idx, acc_outcomes, underlying_value, underlying_value_list, rate_value_list, early_exercise_N=early_exercise_N)
 
 """
 Parameters
@@ -125,7 +142,7 @@ q: Risk neutral probability. If not specified, method: "getQ" is adopted
 
 """
 
-def multiPeriodModelValuation(T, product, q=None, up_rate=0.0, down_rate=0.0, risk_free_rate=0.0, underlying=None, black_scholes=True, underlying_lattice=None, discount_period=None):
+def multiPeriodModelValuation(T, product, q=None, up_rate=0.0, down_rate=0.0, risk_free_rate=0.0, underlying=None, black_scholes=True, underlying_lattice=None, rate_lattice=None, discount_period=None):
     if discount_period is None: discount_period = product.N
     if underlying is None: underlying = product
     print("Evaluating the " + product.product + ":")
@@ -140,7 +157,7 @@ def multiPeriodModelValuation(T, product, q=None, up_rate=0.0, down_rate=0.0, ri
     down_value = 0.0
 
     idx = slideWindow(list(range(product.N+1)))
-    value = getMultipleValue(product.N, discount_period, T, product, underlying, up, down, up_value, down_value, up_rate, q, risk_free_rate, black_scholes, idx, acc_outcomes=list(), underlying_value=None, underlying_value_list=underlying_lattice, early_exercise_N=0)
+    value = getMultipleValue(product.N, discount_period, T, product, underlying, up, down, up_value, down_value, up_rate, q, risk_free_rate, black_scholes, idx, acc_outcomes=list(), underlying_value=None, underlying_value_list=underlying_lattice, rate_value_list=rate_lattice, early_exercise_N=0)
     return value
 
 
