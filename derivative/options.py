@@ -29,20 +29,34 @@ class Options:
 
 
 class CapFloors():
-    def __init__(self, N, cap_floor, strike_price=0.0, type="European", buy=True)
+    def __init__(self, N, cap_floor, fixed_rate=0.0, buy=True):
         self.product = "CapFloor"
         self.N = N
-        self.strike_price = strike_price
+        self.fixed_rate = fixed_rate
         self.cap_floor = cap_floor
-        self.type = type
+        self.type ="European"
         self.buy = buy
 
-        if self.call_put not in ('cap', 'floor'): raise ValueError("Please input the suitable options type.")
-        if self.call_put == 'put': self.type_boolean = -1
+        if self.cap_floor not in ('cap', 'floor'): raise ValueError("Please input the suitable options type.")
+        if self.cap_floor == 'floor': self.type_boolean = -1
         else: self.type_boolean = 1
 		
-		if self.type not in ('American', 'European'):
+        if self.type not in ('American', 'European'):
             raise ValueError("Please input the suitable options type: American / European.")
+
+class Swaptions():
+    def __init__(self, N, strike_rate, buy=True):
+        self.product = "Swaptions"
+        self.N = N
+        self.strike_rate = strike_rate
+        self.type = "" # TODO
+        self.buy = True
 		
+		
+		
+		
+		
+		
+
 		
 		

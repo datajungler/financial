@@ -1,5 +1,6 @@
 # TODO: add underlying stock dividend component into valuation model
 from math import exp, sqrt
+import copy
 
 
 def getQ(N, T, up_rate, volatility, risk_free_rate, dividend, black_scholes=False):
@@ -25,8 +26,10 @@ def getSingleValue(N, T, product, underlying, risk_free_rate, up_value, down_val
         value = override_value
     elif product.product == "Bonds":
         value = coupon_payment +  1/float(1+spot_rate) * (q * up_value +(1-q) * down_value)
-    elif product.product in ("Options", "Forwards") and underlying.product == "Bonds":
+    elif ((product.product in ("Options", "Forwards") and underlying.product == "Bonds") or (product.product in ("CapFloor") and underlying.product=="Rates") or (product.product in ("Swaptions") and underlying.product=="Swaps")) :
         value = 1/float(1+spot_rate) * (q * up_value +(1-q) * down_value)
+    elif product.product == "Swaps":
+        value = 1/float(1+spot_rate) * ((spot_rate - product.fixed_rate) + q * up_value +(1-q) * down_value)
     else:
         value = (q * up_value +(1-q) * down_value)
     if product.product == "Options":
@@ -95,6 +98,12 @@ def getMultipleValue(iter, N, T, product, underlying, up, down, up_value, down_v
                 underlying_value = [max((u-product.strike_price)*product.type_boolean,0) for u in underlying_value_list[product.N]]
             elif product.product in ("Options", "Futures", "Forwards") and underlying.product == "Bonds":
                 underlying_value = [u-underlying.PMT for u in underlying_value_list[product.N]]
+            elif product.product == "CapFloor":
+                underlying_value = [max((u-product.fixed_rate)*product.type_boolean/float(1+u),0) for u in underlying_value_list[product.N]]
+            elif product.product == "Swaps":
+                underlying_value = [(u-product.fixed_rate)/float(1+u) for u in underlying_value_list[product.N]]
+            elif product.product == "Swaptions":
+                underlying_value = [max(u, product.strike_rate) for u in underlying_value_list[product.N]]
 
         new_outcomes = list()
         print("Value at time = " + str(iter) +":\n"+ str(underlying_value))
@@ -118,14 +127,15 @@ def getMultipleValue(iter, N, T, product, underlying, up, down, up_value, down_v
 			
 			# Prepare the parameters of Bonds for backward calculation
             if product.product == "Bonds": coupon_payment, spot_rate = (product.PMT, underlying_value_list[iter-1][j])
-            elif underlying.product == "Bonds": spot_rate = rate_value_list[iter-1][j]
+            elif underlying.product in ("Bonds", "Swaps"): spot_rate = rate_value_list[iter-1][j]
+            elif product.product in ("CapFloor", "Swaps") and underlying.product == "Rates": spot_rate = underlying_value_list[iter-1][j]
 			
 			# Backward calculation of pricing on each node
             value = getSingleValue(N, T, product, underlying, up_value=underlying_value[idx[j][0]], down_value=underlying_value[idx[j][1]], q=q, risk_free_rate=risk_free_rate, black_scholes=black_scholes, option_value=option_value, override_value=override_value, coupon_payment=coupon_payment, spot_rate=spot_rate)
             new_outcomes.append(value)
             
 			# Capture the earliest period for early exercise on American Options
-			if value == option_value and value !=0: early_exercise = True or early_exercise
+            if value == option_value and value !=0: early_exercise = True or early_exercise
         underlying_value = new_outcomes
         new_idx = slideWindow(list(range(iter)))
         if early_exercise == True: early_exercise_N = iter-1
@@ -143,8 +153,10 @@ q: Risk neutral probability. If not specified, method: "getQ" is adopted
 """
 
 def multiPeriodModelValuation(T, product, q=None, up_rate=0.0, down_rate=0.0, risk_free_rate=0.0, underlying=None, black_scholes=True, underlying_lattice=None, rate_lattice=None, discount_period=None):
+    product = copy.deepcopy(product)
     if discount_period is None: discount_period = product.N
     if underlying is None: underlying = product
+    if product.product in ("CapFloor", "Swaps"): product.N = product.N-1
     print("Evaluating the " + product.product + ":")
     if q is not None: up, down = (1+up_rate, 1-down_rate)
     elif product.product in ("Stocks", "Futures"):
